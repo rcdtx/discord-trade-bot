@@ -83,10 +83,21 @@ async def on_message(message):
             )
 
     elif message.content.startswith("!leaderboard"):
-        # Sort the users by their balance
-        sorted_balances = sorted(balances.items(), key=lambda x: x[1], reverse=True)
-        leaderboard_message = f"{sorted_balances}\n"
-        await message.channel.send(leaderboard_message)
+        await message.channel.send(sort_and_convert_leaderboard())
+
+
+def sort_and_convert_leaderboard() -> dict:
+    # Sort the users by their balance
+    sorted_leaderboard = dict(
+        sorted(balances.items(), key=lambda item: item[1], reverse=True)
+    )
+    sorted_and_converted_leaderboard = {}
+    for user_id, score in sorted_leaderboard.items():
+        user = bot.get_user(user_id)
+        if user is not None:
+            username = user.name
+            sorted_and_converted_leaderboard[username] = score
+    return sorted_and_converted_leaderboard
 
 
 if __name__ == "__main__":
