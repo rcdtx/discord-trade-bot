@@ -18,17 +18,31 @@ bot = commands.Bot(command_prefix=">", intents=intents)
 @bot.event
 async def on_message(message):
     if message.content.startswith("!buy"):
-        ticker = message.content.split()[1]
-        # Get current price of ticker from CoinGecko API
-        price = requests.get(
-            f"https://api.coingecko.com/api/v3/simple/price?ids={ticker}&vs_currencies=usd"
-        ).json()[ticker]["usd"]
+        # Get current price of symbol from CoinGecko API
+        symbol = message.content.split()[1]
+        coins_list = requests.get("https://api.coingecko.com/api/v3/coins/list").json()
+
+        for coin in coins_list:
+            if coin["symbol"] == symbol:
+                coin_id = coin["id"]
+                break
+            else:
+                coin_id = None
+
+        if coin_id:
+            price = requests.get(
+                f"https://api.coingecko.com/api/v3/simple/price?ids={coin_id}&vs_currencies=usd"
+            ).json()[coin_id]["usd"]
+        else:
+            print(f"Error: Symbol '{symbol}' not found in CoinGecko API")
+            price = None
+
         user_id = str(message.author.id)
         if user_id in balances:
             if balances[user_id] >= price:
                 balances[user_id] -= price
                 await message.channel.send(
-                    f"{message.author.mention}, you have successfully bought {ticker} for ${price}. Your new balance is ${balances[user_id]}"
+                    f"{message.author.mention}, you have successfully bought {symbol} for ${price}. Your new balance is ${balances[user_id]}"
                 )
             else:
                 await message.channel.send(
@@ -40,16 +54,16 @@ async def on_message(message):
             )
 
     elif message.content.startswith("!sell"):
-        ticker = message.content.split()[1]
-        # Get current price of ticker from CoinGecko API
+        symbol = message.content.split()[1]
+        # Get current price of symbol from CoinGecko API
         price = requests.get(
-            f"https://api.coingecko.com/api/v3/simple/price?ids={ticker}&vs_currencies=usd"
-        ).json()[ticker]["usd"]
+            f"https://api.coingecko.com/api/v3/simple/price?ids={symbol}&vs_currencies=usd"
+        ).json()[symbol]["usd"]
         user_id = str(message.author.id)
         if user_id in balances:
             balances[user_id] += price
             await message.channel.send(
-                f"{message.author.mention}, you have successfully sold {ticker} for ${price}. Your new balance is ${balances[user_id]}"
+                f"{message.author.mention}, you have successfully sold {symbol} for ${price}. Your new balance is ${balances[user_id]}"
             )
         else:
             await message.channel.send(
