@@ -17,6 +17,7 @@ bot = commands.Bot(command_prefix=">", intents=intents)
 
 @bot.event
 async def on_message(message):
+    user_id = message.author.id
     if message.content.startswith("!buy"):
         # Get current price of symbol from CoinGecko API
         symbol = message.content.split()[1]
@@ -37,7 +38,6 @@ async def on_message(message):
             print(f"Error: Symbol '{symbol}' not found in CoinGecko API")
             price = None
 
-        user_id = str(message.author.id)
         if user_id in balances:
             if balances[user_id] >= price:
                 balances[user_id] -= price
@@ -59,7 +59,6 @@ async def on_message(message):
         price = requests.get(
             f"https://api.coingecko.com/api/v3/simple/price?ids={symbol}&vs_currencies=usd"
         ).json()[symbol]["usd"]
-        user_id = str(message.author.id)
         if user_id in balances:
             balances[user_id] += price
             await message.channel.send(
@@ -71,7 +70,6 @@ async def on_message(message):
             )
 
     elif message.content.startswith("!balance"):
-        user_id = str(message.author.id)
         if user_id in balances:
             await message.channel.send(
                 f"{message.author.mention}, your balance is ${balances[user_id]}"
@@ -83,17 +81,17 @@ async def on_message(message):
             )
 
     elif message.content.startswith("!leaderboard"):
-        await message.channel.send(sort_and_convert_leaderboard())
+        await message.channel.send(await sort_and_convert_leaderboard())
 
 
-def sort_and_convert_leaderboard() -> dict:
+async def sort_and_convert_leaderboard() -> dict:
     # Sort the users by their balance
     sorted_leaderboard = dict(
         sorted(balances.items(), key=lambda item: item[1], reverse=True)
     )
     sorted_and_converted_leaderboard = {}
     for user_id, score in sorted_leaderboard.items():
-        user = bot.get_user(user_id)
+        user = await bot.fetch_user(user_id)
         if user is not None:
             username = user.name
             sorted_and_converted_leaderboard[username] = score
