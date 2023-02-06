@@ -26,7 +26,6 @@ async def on_message(message):
     user_id = message.author.id
 
     if message.content.startswith("!buy"):
-        # Get current price of symbol from CoinGecko API
         symbol = message.content.split()[1]
         amount = float(message.content.split()[2])
 
@@ -45,7 +44,7 @@ async def on_message(message):
                 balances[user_id][symbol] += purchase_amount
 
                 await message.channel.send(
-                    f"{message.author.mention}, you have successfully bought {purchase_amount} of {symbol} at ${price}. Your new balance is:\n```{get_balance_table(user_id)}```"
+                    f"{message.author.mention}, you have successfully bought {purchase_amount} of {symbol} at ${price}. Your new balance is:\n```\n{get_balance_table(user_id)}```"
                 )
             else:
                 await message.channel.send(
@@ -60,7 +59,6 @@ async def on_message(message):
         symbol = message.content.split()[1]
         amount = float(message.content.split()[2])
 
-        # Get current price of symbol from CoinGecko API
         price = get_price(symbol)
 
         if user_id in balances:
@@ -75,7 +73,7 @@ async def on_message(message):
                 return
 
             await message.channel.send(
-                f"{message.author.mention}, you have successfully sold {amount} of {symbol} for ${price}. Your new balance is:\n```{get_balance_table(user_id)}```"
+                f"{message.author.mention}, you have successfully sold {amount} of {symbol} for ${price}. Your new balance is:\n```\n{get_balance_table(user_id)}```"
             )
         else:
             await message.channel.send(
@@ -85,17 +83,17 @@ async def on_message(message):
     elif message.content.startswith("!balance"):
         if user_id in balances:
             await message.channel.send(
-                f"{message.author.mention}, your balance is:\n```{get_balance_table(user_id)}```"
+                f"{message.author.mention}, your balance is:\n```\n{get_balance_table(user_id)}```"
             )
         else:
             balances[user_id]["usd"] = 1000.0
 
             await message.channel.send(
-                f"{message.author.mention}, an account has been set up for you with a balance of:\n```{get_balance_table(user_id)}```"
+                f"{message.author.mention}, an account has been set up for you with a balance of:\n ```\n{get_balance_table(user_id)}```"
             )
 
     elif message.content.startswith("!leaderboard"):
-        await message.channel.send(await sort_and_convert_leaderboard())
+        await message.channel.send(f"```\n{await sort_and_convert_leaderboard()}```")
 
 
 def get_balance_table(user_id: int):
@@ -133,15 +131,22 @@ def get_price(symbol: str) -> float:
 async def sort_and_convert_leaderboard() -> dict:
     # Sort the users by their balance
     sorted_leaderboard = dict(
-        sorted(balances.items(), key=lambda item: item[1], reverse=True)
+        sorted(dict(balances).items(), key=lambda item: item[1]["usd"], reverse=True)
     )
     sorted_and_converted_leaderboard = {}
+    table = PrettyTable()
+    table.field_names = ["user", "usd"]
+
     for user_id, score in sorted_leaderboard.items():
         user = await bot.fetch_user(user_id)
         if user is not None:
             username = user.name
             sorted_and_converted_leaderboard[username] = score
-    return sorted_and_converted_leaderboard
+
+    for key, value in sorted_and_converted_leaderboard.items():
+        table.add_row([key, value["usd"]])
+
+    return table
 
 
 if __name__ == "__main__":
