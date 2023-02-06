@@ -44,15 +44,8 @@ async def on_message(message):
                 purchase_amount = amount / price
                 balances[user_id][symbol] += purchase_amount
 
-                table = PrettyTable()
-
-                table.field_names = ["symbol", "amount"]
-
-                for key, value in balances[user_id].items():
-                    table.add_row([key, value])
-
                 await message.channel.send(
-                    f"{message.author.mention}, you have successfully bought {purchase_amount} of {symbol} at ${price}. Your new balance is {table}"
+                    f"{message.author.mention}, you have successfully bought {purchase_amount} of {symbol} at ${price}. Your new balance is:\n```{get_balance_table(user_id)}```"
                 )
             else:
                 await message.channel.send(
@@ -80,15 +73,9 @@ async def on_message(message):
                     f"{message.author.mention}, you do not have enough {symbol} in your account to sell {amount}."
                 )
                 return
-            table = PrettyTable()
-
-            table.field_names = ["symbol", "amount"]
-
-            for key, value in balances[user_id].items():
-                table.add_row([key, value])
 
             await message.channel.send(
-                f"{message.author.mention}, you have successfully sold {amount} of {symbol} for ${price}. Your new balance is {table}"
+                f"{message.author.mention}, you have successfully sold {amount} of {symbol} for ${price}. Your new balance is:\n```{get_balance_table(user_id)}```"
             )
         else:
             await message.channel.send(
@@ -104,11 +91,22 @@ async def on_message(message):
             balances[user_id]["usd"] = 1000.0
 
             await message.channel.send(
-                f"{message.author.mention}, an account has been set up for you with a balance of ${balances[user_id]}"
+                f"{message.author.mention}, an account has been set up for you with a balance of ```\n{get_balance_table(user_id)}```"
             )
 
     elif message.content.startswith("!leaderboard"):
         await message.channel.send(await sort_and_convert_leaderboard())
+
+
+def get_balance_table(user_id: int):
+    table = PrettyTable()
+
+    table.field_names = ["symbol", "amount"]
+
+    for key, value in balances[user_id].items():
+        table.add_row([key, value])
+
+    return table
 
 
 def get_price(symbol: str) -> float:
