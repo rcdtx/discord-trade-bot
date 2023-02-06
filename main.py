@@ -85,13 +85,13 @@ async def on_message(message):
     elif message.content.startswith("!balance"):
         if user_id in balances:
             await message.channel.send(
-                f"{message.author.mention}, your balance is ${balances[user_id]}"
+                f"{message.author.mention}, your balance is:\n```{get_balance_table(user_id)}```"
             )
         else:
             balances[user_id]["usd"] = 1000.0
 
             await message.channel.send(
-                f"{message.author.mention}, an account has been set up for you with a balance of ```\n{get_balance_table(user_id)}```"
+                f"{message.author.mention}, an account has been set up for you with a balance of:\n```{get_balance_table(user_id)}```"
             )
 
     elif message.content.startswith("!leaderboard"):
