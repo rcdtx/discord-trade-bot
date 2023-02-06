@@ -1,13 +1,16 @@
+import collections
 import os
 
 import requests
 import discord
+
 from discord.ext import commands
+from prettytable import PrettyTable
 
 discord_bot_key = os.environ["DISCORD_BOT_KEY"]
 
 # Initialize user's balances
-balances = {}
+balances = collections.defaultdict(lambda: collections.defaultdict(float))
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -38,10 +41,18 @@ async def on_message(message):
                     return
 
                 balances[user_id]["usd"] -= amount
-                balances[user_id][symbol] += amount / price
+                purchase_amount = amount / price
+                balances[user_id][symbol] += purchase_amount
+
+                table = PrettyTable()
+
+                table.field_names = ["symbol", "amount"]
+
+                for key, value in balances[user_id].items():
+                    table.add_row([key, value])
 
                 await message.channel.send(
-                    f"{message.author.mention}, you have successfully bought {symbol} for ${price}. Your new balance is ${balances[user_id]}"
+                    f"{message.author.mention}, you have successfully bought {purchase_amount} of {symbol} at ${price}. Your new balance is {table}"
                 )
             else:
                 await message.channel.send(
@@ -62,13 +73,22 @@ async def on_message(message):
         if user_id in balances:
             if amount > 0 and amount <= balances[user_id][symbol]:
                 balances[user_id]["usd"] += price * amount
+                balances[user_id][symbol] -= amount
+
             else:
                 await message.channel.send(
                     f"{message.author.mention}, you do not have enough {symbol} in your account to sell {amount}."
                 )
+                return
+            table = PrettyTable()
+
+            table.field_names = ["symbol", "amount"]
+
+            for key, value in balances[user_id].items():
+                table.add_row([key, value])
 
             await message.channel.send(
-                f"{message.author.mention}, you have successfully sold {symbol} for ${price}. Your new balance is ${balances[user_id]}"
+                f"{message.author.mention}, you have successfully sold {amount} of {symbol} for ${price}. Your new balance is {table}"
             )
         else:
             await message.channel.send(
@@ -82,6 +102,7 @@ async def on_message(message):
             )
         else:
             balances[user_id]["usd"] = 1000.0
+
             await message.channel.send(
                 f"{message.author.mention}, an account has been set up for you with a balance of ${balances[user_id]}"
             )
@@ -90,10 +111,8 @@ async def on_message(message):
         await message.channel.send(await sort_and_convert_leaderboard())
 
 
-async def get_price(symbol: str) -> float:
-    coins_list = await requests.get(
-        "https://api.coingecko.com/api/v3/coins/list"
-    ).json()
+def get_price(symbol: str) -> float:
+    coins_list = requests.get("https://api.coingecko.com/api/v3/coins/list").json()
 
     for coin in coins_list:
         if coin["symbol"] == symbol:
@@ -103,7 +122,7 @@ async def get_price(symbol: str) -> float:
             coin_id = None
 
     if coin_id:
-        price = await requests.get(
+        price = requests.get(
             f"https://api.coingecko.com/api/v3/simple/price?ids={coin_id}&vs_currencies=usd"
         ).json()[coin_id]["usd"]
     else:
@@ -132,7 +151,7 @@ if __name__ == "__main__":
         bot.run(discord_bot_key)
     except discord.HTTPException as e:
         if e.status == 429:
-            print("rate limit issue... restarting")
+            print("discord rate limit issue... restarting")
             os.system("kill 1")
         else:
             raise e
